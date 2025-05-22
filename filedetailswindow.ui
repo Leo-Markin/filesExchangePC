@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>FileDetailsWindow</class>
+ <widget class="QDialog" name="FileDetailsWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>450</width>
+    <height>330</height> <!-- Немного увеличил высоту -->
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Информация о файле</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_2">
+   <item>
+    <widget class="QLabel" name="fileNameLabel">
+     <property name="font">
+      <font>
+       <pointsize>12</pointsize>
+       <weight>Bold</weight> <!-- Qt 6 стиль -->
+      </font>
+     </property>
+     <property name="text">
+      <string>Загрузка имени файла...</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set> <!-- Qt 6 стиль -->
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Детали файла</string>
+     </property>
+     <layout class="QFormLayout" name="formLayout">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>Размер:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="fileSizeLabel">
+        <property name="text">
+         <string>...</string>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set> <!-- Qt 6 стиль -->
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Владелец:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QLabel" name="ownerNameLabel">
+        <property name="text">
+         <string>...</string>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set> <!-- Qt 6 стиль -->
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>Дата загрузки:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="uploadDateLabel">
+        <property name="text">
+         <string>...</string>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set> <!-- Qt 6 стиль -->
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_5">
+        <property name="text">
+         <string>Просмотров:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLabel" name="countViewsLabel">
+        <property name="text">
+         <string>...</string>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set> <!-- Qt 6 стиль -->
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_6">
+        <property name="text">
+         <string>Скачиваний:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLabel" name="countDownloadsLabel">
+        <property name="text">
+         <string>...</string>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set> <!-- Qt 6 стиль -->
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum> <!-- Qt 6 стиль -->
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>10</height> <!-- Уменьшил spacer -->
+      </size>
+     </property>
+    </spacer>
+   </item>
+
+   <!-- ================== ДОБАВЛЕН PROGRESS BAR ================== -->
+   <item>
+    <widget class="QProgressBar" name="downloadProgressBar">
+     <property name="minimum">
+      <number>0</number>
+     </property>
+     <property name="maximum">
+      <number>100</number>
+     </property>
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="textVisible">
+      <bool>true</bool>
+     </property>
+     <property name="visible"> <!-- Скрыт по умолчанию -->
+         <bool>false</bool>
+     </property>
+     <property name="alignment"> <!-- Выравнивание текста по центру -->
+         <set>Qt::AlignCenter</set> <!-- Qt 6 стиль -->
+     </property>
+     <property name="format"> <!-- Формат текста по умолчанию -->
+          <string>Скачивание: %p%</string>
+     </property>
+    </widget>
+   </item>
+   <!-- ============================================================ -->
+
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum> <!-- Qt 6 стиль -->
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="downloadButton">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Скачать</string> <!-- Убрал "(скоро)" -->
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>.</normaloff>.</iconset> <!-- Заглушка для иконки -->
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="closeButton">
+       <property name="text">
+        <string>Закрыть</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>closeButton</sender>
+   <signal>clicked()</signal>
+   <receiver>FileDetailsWindow</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>397</x>
+     <y>306</y> <!-- Обновил координаты из-за добавления прогресс бара -->
+    </hint>
+    <hint type="destinationlabel">
+     <x>224</x>
+     <y>164</y> <!-- Обновил координаты -->
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
