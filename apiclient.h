@@ -8,11 +8,11 @@
 #include <QUrlQuery>
 #include <QUrl>
 #include <QJsonObject>
-#include <QHttpMultiPart> // <-- для multipart/form-data
-#include <QMimeDatabase> // <--  для определения MIME-типа
-#include <QFileInfo>     // <--  для получения имени файла
-#include <QList>       // Для списка файлов
-#include "datatypes.h" // Включаем нашу структуру FileInfo
+#include <QHttpMultiPart>
+#include <QMimeDatabase>
+#include <QFileInfo>
+#include <QList>
+#include "datatypes.h"
 #include <QFile>
 
 class ApiClient : public QObject
@@ -41,25 +41,25 @@ signals:
     void loginSuccess(const QString &token, const QString &role);
     void loginFailed(const QString &errorString, int statusCode = 0);
 
-    // Новые сигналы для списка файлов
+    // сигналы для списка файлов
     void userFilesSuccess(const QList<FileInfo> &files);
     void userFilesFailed(const QString &errorString, int statusCode = 0);
 
-    // Новые сигналы для загрузки файлов
+    // сигналы для загрузки файлов
     void uploadSuccess(); // Сигнал при успехе
     void uploadProgress(qint64 bytesSent, qint64 bytesTotal); // Сигнал для прогресса
     void uploadFailed(const QString &errorString, int statusCode = 0); // Сигнал при ошибке
 
-    // Новые сигналы для получения информации о файле
+    // сигналы для получения информации о файле
     void fileInfoSuccess(const QJsonObject &fileData);
     void fileInfoFailed(const QString &errorString, int statusCode = 0);
 
-    // Новые сигналы для скачивания файла
+    // сигналы для скачивания файла
     void downloadSuccess(const QString &requestedFileId, const QByteArray &fileData, const QString &originalFileName);
     void downloadProgress(const QString &requestedFileId, qint64 bytesReceived, qint64 bytesTotal);
     void downloadFailed(const QString &requestedFileId, const QString &errorString, int statusCode = 0);
 
-    // Новые сигналы для удаления файла
+    // сигналы для удаления файла
     void deleteSuccess(const QString &deletedFileId);
     void deleteFailed(const QString &failedFileId, const QString &errorString, int statusCode = 0);
 

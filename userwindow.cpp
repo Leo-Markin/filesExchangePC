@@ -1,6 +1,6 @@
 #include "userwindow.h"
 #include "ui_userwindow.h"
-#include "apiclient.h" // Нужен для вызова методов API и подключения сигналов
+#include "apiclient.h"
 #include "filedetailswindow.h"
 
 #include <QMessageBox>
@@ -11,10 +11,10 @@
 #include <QProgressBar>
 #include <QFileDialog>
 #include <QDir>
-#include <QClipboard>   // Для копирования в буфер
-#include <QApplication> // Для доступа к буферу обмена
-#include <QToolTip>     // Для подсказки при копировании
-#include <QHBoxLayout>  // Для кнопок в таблице
+#include <QClipboard>
+#include <QApplication>
+#include <QToolTip>
+#include <QHBoxLayout>
 
 UserWindow::UserWindow(const QString &token, ApiClient *client, QWidget *parent) :
     QWidget(parent), // или QMainWindow(parent)
@@ -27,7 +27,7 @@ UserWindow::UserWindow(const QString &token, ApiClient *client, QWidget *parent)
     if (!apiClient) {
         QMessageBox::critical(this, "Ошибка инициализации", "Не удалось инициализировать API клиент.");
         qCritical() << "API Client не был предоставлен!";
-        return; // Или throw?
+        return;
     }
 
     connect(apiClient, &ApiClient::userFilesSuccess, this, &UserWindow::handleFilesSuccess, Qt::UniqueConnection);
@@ -63,9 +63,8 @@ void UserWindow::setupUserInterface()
 
     qDebug() << "Настройка UI для UserWindow...";
     ui = new Ui::UserWindow();
-    ui->setupUi(this); // <<<=== SetupUi ТЕПЕРЬ ЗДЕСЬ
+    ui->setupUi(this);
 
-    // Находим ProgressBar
     QProgressBar *progressBar = this->findChild<QProgressBar*>("uploadProgressBar");
     if (progressBar) {
         progressBar->setVisible(false);
@@ -79,8 +78,6 @@ void UserWindow::setupUserInterface()
     if(uploadBtn) {
         uploadBtn->setEnabled(true);
         uploadBtn->setText("Загрузить файл");
-        // Используем this в connect, т.к. слот принадлежит этому объекту
-        // connect(uploadBtn, &QPushButton::clicked, this, &UserWindow::on_uploadButton_clicked);
         qDebug() << "UserWindow UI: uploadButton подключен.";
     }
     QLineEdit *searchEdit = this->findChild<QLineEdit*>("searchLineEdit");
@@ -90,7 +87,7 @@ void UserWindow::setupUserInterface()
     }
 
     // Настраиваем таблицу UserWindow
-    setupTable(); // setupTable теперь найдет виджеты, т.к. setupUi уже выполнен
+    setupTable();
 }
 
 // Вспомогательный метод для управления состоянием UI во время загрузки
@@ -125,7 +122,6 @@ void UserWindow::setupTable()
     table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
     table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     table->horizontalHeader()->setSectionResizeMode(4, QHeaderView::ResizeToContents);
-    // table->verticalHeader()->setVisible(false); // Раскомментировать, если нужно
     table->setRowCount(0);
 }
 
@@ -255,8 +251,6 @@ void UserWindow::copyFileLink()
             QClipboard *clipboard = QApplication::clipboard();
             clipboard->setText(url);
             qDebug() << "UserWindow: Ссылка скопирована:" << url;
-            // (Опционально) Показать уведомление пользователю
-            //statusBar()->showMessage("Ссылка скопирована!", 2000); // Показать на 2 сек
             QToolTip::showText(button->mapToGlobal(QPoint(0,0)), "Ссылка скопирована!", button, button->rect(), 2000);
 
         } else {
@@ -270,11 +264,8 @@ void UserWindow::viewFileDetails()
 {
     QPushButton *button = qobject_cast<QPushButton*>(sender());
     if (!button) return;
-
-    // --- ИЗМЕНЕНИЕ: Извлекаем ОБА идентификатора ---
     QString fileId = button->property("fileId").toString();
     QString urlIdentifier = button->property("urlIdentifier").toString(); // Извлекаем URL ID
-    // -------------------------------------------
 
     if (fileId.isEmpty() || urlIdentifier.isEmpty()) { // Проверяем оба
         qWarning() << "UserWindow: Не удалось получить ID файла или URL идентификатор для просмотра деталей.";
@@ -283,11 +274,8 @@ void UserWindow::viewFileDetails()
     }
 
     qDebug() << "UserWindow: Открытие окна деталей для файла ID:" << fileId << "URL ID:" << urlIdentifier;
-
-    // --- ИЗМЕНЕНИЕ: Передаем оба идентификатора ---
     FileDetailsWindow *detailsWin = new FileDetailsWindow(apiToken, urlIdentifier, fileId, apiClient, this);
-    // -------------------------------------------
-    detailsWin->exec(); // Показываем модально
+    detailsWin->exec();
 }
 
 // Слот для кнопки "Загрузить"
@@ -356,9 +344,6 @@ void UserWindow::deleteFileClicked()
 
     if (reply == QMessageBox::Yes) {
         qDebug() << "UserWindow: Запрос на удаление файла ID:" << fileId << "Имя:" << fileName;
-        // (Опционально) Можно временно заблокировать кнопку или строку
-        // button->setEnabled(false);
-        // statusBar()->showMessage("Удаление файла...");
         apiClient->deleteFile(apiToken, fileId); // Вызываем метод API клиента
     } else {
         qDebug() << "UserWindow: Удаление файла ID:" << fileId << "отменено пользователем.";
@@ -369,7 +354,6 @@ void UserWindow::deleteFileClicked()
 void UserWindow::handleDeleteSuccess(const QString &deletedFileId)
 {
     qDebug() << "UserWindow: Файл с ID" << deletedFileId << "успешно удален.";
-    // statusBar()->showMessage("Файл успешно удален.", 3000); // Показать сообщение на 3 сек
     QMessageBox::information(this, "Удаление завершено", "Файл успешно удален.");
 
     // Обновляем список файлов после успешного удаления
@@ -380,8 +364,5 @@ void UserWindow::handleDeleteSuccess(const QString &deletedFileId)
 void UserWindow::handleDeleteFailed(const QString &failedFileId, const QString &errorString, int statusCode)
 {
     qWarning() << "UserWindow: Ошибка удаления файла ID:" << failedFileId << "Статус:" << statusCode << "Ошибка:" << errorString;
-    // statusBar()->clearMessage();
     QMessageBox::warning(this, "Ошибка удаления", errorString);
-    // (Опционально) Разблокировать кнопку/строку, если блокировали
 }
-// ----------------------------------

@@ -37,8 +37,6 @@ private slots:
     void handleBackupFailed(const QString &errorString, int statusCode);
 
 private:
-    // Указатель на UI админа (переопределяем или используем новый?)
-    // ЛУЧШЕ ИСПОЛЬЗОВАТЬ НОВЫЙ UI, так как структура другая (с табами)
     Ui::AdminWindow *adminUi; // Используем отдельный указатель на UI админа
 
     QList<UserData> allUsers; // Хранение списка пользователей

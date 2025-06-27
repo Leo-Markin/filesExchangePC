@@ -1,26 +1,26 @@
 #include "adminwindow.h"
-#include "ui_adminwindow.h" // Подключаем UI АДМИНА
+#include "ui_adminwindow.h"
 #include "apiclient.h"
 #include "ui_userwindow.h"
 
 #include <QMessageBox>
 #include <QDebug>
-#include <QInputDialog> // Для ввода пароля/имени
-#include <QTableWidget> // Для таблицы пользователей
-#include <QPushButton>  // Для кнопок в таблице
-#include <QHBoxLayout> // Для кнопок в таблице
+#include <QInputDialog>
+#include <QTableWidget>
+#include <QPushButton>
+#include <QHBoxLayout>
 #include <QHeaderView>
 
 AdminWindow::AdminWindow(const QString &token, ApiClient *client, QWidget *parent) :
-    UserWindow(token, client, parent), // Вызываем конструктор базового класса
-    adminUi(nullptr)    // Создаем UI АДМИНА
+    UserWindow(token, client, parent),
+    adminUi(nullptr)
 {
     adminUi = new Ui::AdminWindow(); // Создаем UI админа
     adminUi->setupUi(this); // Устанавливаем UI админа для этого окна
 
-    ui = reinterpret_cast<Ui::UserWindow*>(adminUi); // "Притворяемся", что adminUi - это UserWindow ui
+    ui = reinterpret_cast<Ui::UserWindow*>(adminUi); // adminUi - это UserWindow ui
 
-    QProgressBar* progressBar = this->findChild<QProgressBar*>("uploadProgressBar"); // Или так, надежнее
+    QProgressBar* progressBar = this->findChild<QProgressBar*>("uploadProgressBar");
     if (progressBar) {
         progressBar->setVisible(false);
         progressBar->setValue(0);
@@ -42,14 +42,8 @@ AdminWindow::AdminWindow(const QString &token, ApiClient *client, QWidget *paren
     if (uploadBtn) {
         uploadBtn->setEnabled(true);
         uploadBtn->setText("Загрузить файл");
-        // connect(uploadBtn, &QPushButton::clicked, this, &AdminWindow::on_uploadButton_clicked);
         qDebug() << "AdminWindow: uploadButton подключен.";
     } else { qWarning() << "AdminWindow: Не найден uploadButton!"; }
-
-    // Настройка базового функционала (файлы) уже произошла в конструкторе UserWindow,
-    // но нам нужно убедиться, что он использует элементы из adminUi->filesTab.
-    // Метод setupTable() унаследован, вызовем его, он должен найти filesTableWidget.
-    // Метод requestUserFiles() унаследован, он вызовется в конце.
 
     // --- Подключение АДМИНСКИХ сигналов API ---
     disconnect(apiClient, &ApiClient::userListSuccess, this, &AdminWindow::handleUserListSuccess);
@@ -84,7 +78,6 @@ AdminWindow::~AdminWindow()
     if (apiClient) {
         disconnect(apiClient, &ApiClient::userListSuccess, this, &AdminWindow::handleUserListSuccess);
         disconnect(apiClient, &ApiClient::userListFailed, this, &AdminWindow::handleUserListFailed);
-        // ... отключаем остальные админские сигналы ...
         disconnect(apiClient, &ApiClient::deleteUserSuccess, this, &AdminWindow::handleDeleteUserSuccess);
         disconnect(apiClient, &ApiClient::deleteUserFailed, this, &AdminWindow::handleDeleteUserFailed);
         disconnect(apiClient, &ApiClient::changePasswordSuccess, this, &AdminWindow::handleChangePasswordSuccess);
@@ -94,10 +87,8 @@ AdminWindow::~AdminWindow()
         disconnect(apiClient, &ApiClient::backupSuccess, this, &AdminWindow::handleBackupSuccess);
         disconnect(apiClient, &ApiClient::backupFailed, this, &AdminWindow::handleBackupFailed);
     }
-    // Деструктор базового класса UserWindow позаботится об отключении своих сигналов и удалении ui (если он не null)
-    // Нам нужно удалить adminUi
     delete adminUi;
-    ui = nullptr; // Обнуляем указатель базового класса
+    ui = nullptr;
     qDebug() << "AdminWindow уничтожен.";
 }
 
@@ -164,7 +155,6 @@ void AdminWindow::populateUsersTable(const QList<UserData> &usersToDisplay)
     }
     adminUi->usersTableWidget->setEnabled(true); // Разблокируем после заполнения
 }
-// ---------------------------------------------
 
 // --- Слоты для кнопок управления пользователями ---
 void AdminWindow::on_addUserButton_clicked()

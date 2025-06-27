@@ -4,7 +4,6 @@
 #include <QDialog>
 #include <QString>
 
-// Прямые объявления
 namespace Ui { class FileDetailsWindow; }
 class ApiClient;
 class QJsonObject;
@@ -43,7 +42,7 @@ private:
     QString currentFileId;      // ID файла, для которого открыто окно
     QString currentFileName;    // Имя файла, полученное из getFileInfo
     ApiClient *apiClient;
-    QProgressBar *downloadProgressBar; // <-- Указатель на прогресс бар
+    QProgressBar *downloadProgressBar; // Указатель на прогресс бар
 
     void requestFileInfo(); // Запрос информации при открытии
     void setFieldsEnabled(bool enabled); // Вкл/выкл полей ввода

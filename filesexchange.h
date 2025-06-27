@@ -2,7 +2,7 @@
 #define FILESEXCHANGE_H
 
 #include <QMainWindow>
-#include "apiclient.h" // Включаем наш клиент
+#include "apiclient.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class FileseXchange; }
@@ -19,7 +19,7 @@ public:
 private slots:
     void on_button_enter_clicked();
 
-    // ИЗМЕНЕНО: Сигнатура слота для соответствия сигналу ApiClient
+    // Сигнатура слота для соответствия сигналу ApiClient
     void handleLoginSuccess(const QString &token, const QString &role);
     void handleLoginFailure(const QString &errorString, int statusCode);
 
@@ -31,7 +31,7 @@ private:
     QString currentUserToken;
     QString currentUserRole;
 
-    // (Опционально) Метод для перехода к следующему этапу
+    // Метод для перехода к следующему этапу
     void proceedToAppInterface();
 };
 #endif // FILESEXCHANGE_H

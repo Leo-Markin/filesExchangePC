@@ -1,21 +1,19 @@
 #include "apiclient.h"
 #include <QNetworkRequest>
 #include <QDebug>
-#include <QJsonDocument> // Для парсинга JSON
-#include <QJsonObject>   // Для работы с JSON объектом
-#include <QJsonArray>    // Для массива файлов
-#include <QFile>         // Для работы с файлом
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QFile>
 #include <QUrlQuery>
 
-namespace { // Анонимное пространство имен для ограничения видимости функции
+namespace {
 
-// Вспомогательная функция для парсинга сообщений об ошибках из JSON или текста
 QString parseErrorMessage(const QByteArray &responseData, const QString &defaultPrefix)
 {
     QString errorMsg = defaultPrefix; // Сообщение по умолчанию
 
     if (responseData.isEmpty()) {
-        // Если ответ пустой, возвращаем только префикс
         return errorMsg;
     }
 
@@ -27,10 +25,8 @@ QString parseErrorMessage(const QByteArray &responseData, const QString &default
         // Успешно разобрали JSON объект
         QJsonObject obj = doc.object();
         if (obj.contains("message") && obj["message"].isString() && !obj["message"].toString().isEmpty()) {
-            // Найден ключ "message" со строкой
             errorMsg = obj["message"].toString();
         } else if (obj.contains("status") && obj["status"].isString() && !obj["status"].toString().isEmpty()) {
-            // Найден ключ "status" со строкой (как в вашем API)
             errorMsg = QString("%1: %2").arg(defaultPrefix).arg(obj["status"].toString());
         } else {
             // JSON есть, но нужных ключей нет, возвращаем префикс + сырой JSON
@@ -38,7 +34,6 @@ QString parseErrorMessage(const QByteArray &responseData, const QString &default
         }
     } else {
         // Не удалось разобрать как JSON или это не объект, считаем текстом
-        // Добавляем тело ответа к префиксу, если оно не слишком длинное (чтобы не засорять лог/сообщение)
         if (responseData.size() < 256) { // Ограничение длины
             errorMsg = QString("%1: %2").arg(defaultPrefix).arg(QString::fromUtf8(responseData).trimmed());
         } else {
@@ -49,7 +44,7 @@ QString parseErrorMessage(const QByteArray &responseData, const QString &default
     return errorMsg;
 }
 
-} // конец анонимного пространства имен
+}
 
 ApiClient::ApiClient(const QString &baseUrl, QObject *parent)
     : QObject(parent), apiBaseUrl(baseUrl)
@@ -76,7 +71,7 @@ QUrl ApiClient::buildUrl(const QString &endpoint) const
 
 void ApiClient::login(const QString &username, const QString &password)
 {
-    QUrl loginUrl = buildUrl("auth.php"); // Или ваш эндпоинт
+    QUrl loginUrl = buildUrl("auth.php");
     QNetworkRequest request(loginUrl);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
@@ -99,10 +94,8 @@ void ApiClient::login(const QString &username, const QString &password)
             qDebug() << "ApiClient: Статус код:" << statusCode;
             qDebug() << "ApiClient: Тело ответа:" << responseData;
 
-            // --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
             // Считаем успехом ТОЛЬКО статус 200 OK для логина
             if (statusCode == 200) {
-                // --- КОНЕЦ ИЗМЕНЕНИЯ ---
                 // Попытка парсинга JSON
                 QJsonParseError parseError;
                 QJsonDocument doc = QJsonDocument::fromJson(responseData, &parseError);
@@ -120,46 +113,38 @@ void ApiClient::login(const QString &username, const QString &password)
                             emit loginSuccess(token, role);
                         } else {
                             qWarning() << "ApiClient: Ошибка парсинга - получен пустой токен.";
-                            // Эмит loginFailed, т.к. данные неполные, даже при статусе 200
                             emit loginFailed("Ошибка ответа сервера: получен пустой токен.", statusCode);
                         }
                     } else {
                         qWarning() << "ApiClient: Ошибка парсинга - отсутствуют ключи 'token_api'/'role' или они не строки.";
-                            // Эмит loginFailed, т.к. данные некорректны, даже при статусе 200
                         emit loginFailed("Ошибка ответа сервера: неверный формат данных (отсутствуют token_api/role).", statusCode);
                     }
                 } else {
                     qWarning() << "ApiClient: Ошибка парсинга JSON:" << parseError.errorString();
-                        // Эмит loginFailed, т.к. не смогли разобрать ответ, даже при статусе 200
                     emit loginFailed("Ошибка ответа сервера: не удалось разобрать JSON (" + parseError.errorString() + ").", statusCode);
                 }
             } else {
-                // Обработка ВСЕХ ДРУГИХ статус-кодов как ошибки авторизации/сервера
                 QString errorMsg = QString("Неожиданный ответ сервера (Код: %1)").arg(statusCode);
                 if (!responseData.isEmpty()) {
-                    // Пытаемся получить текст ошибки из ответа
                     errorMsg = QString("Сервер вернул ошибку %1: %2").arg(statusCode).arg(QString::fromUtf8(responseData));
                 }
                 // Специальные сообщения для частых ошибок авторизации
-                if (statusCode == 401 || statusCode == 403) {
+                if (statusCode == 201) {
                     errorMsg = "Неверный логин или пароль.";
                 } else if (statusCode >= 500) {
                     errorMsg = QString("Внутренняя ошибка сервера (Код: %1)").arg(statusCode);
-                } // Можно добавить обработку 404 и других кодов, если нужно
-
+                }
                 qWarning() << "ApiClient: Запрос завершился с ошибкой или неожиданным статусом:" << statusCode;
                 emit loginFailed(errorMsg, statusCode);
             }
         }
-        // Сетевая ошибка (reply->error() != QNetworkReply::NoError) обработается в errorOccurred
 
         reply->deleteLater();
     });
 
     connect(reply, &QNetworkReply::errorOccurred, this, [this, reply](QNetworkReply::NetworkError code) {
-        if (code == QNetworkReply::NoError) return; // Иногда может прийти NoError, если finished обработал раньше
+        if (code == QNetworkReply::NoError) return;
         qWarning() << "ApiClient: Ошибка сети (" << code << ") для" << reply->url().toString() << ":" << reply->errorString();
-        // Проверяем, не был ли reply уже удален (на всякий случай)
         if (!reply) return;
         emit loginFailed(QString("Ошибка сети: %1").arg(reply->errorString()), 0); // 0 для сетевых ошибок
         reply->deleteLater();
@@ -175,13 +160,9 @@ void ApiClient::getUserFiles(const QString &token)
         emit userFilesFailed("Внутренняя ошибка: отсутствует токен авторизации.", 0);
         return;
     }
-
-    // ЗАМЕНИТЕ "user_files.php" на ваш реальный эндпоинт
     QUrl filesUrl = buildUrl("user_files.php");
     QNetworkRequest request(filesUrl);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
-    // Можно добавить заголовок Authorization, если ваш API его ожидает вместо параметра
-    // request.setRawHeader("Authorization", ("Bearer " + token).toUtf8());
 
     QUrlQuery postData;
     postData.addQueryItem("token_api", token); // Отправляем токен как параметр POST
@@ -201,7 +182,6 @@ void ApiClient::getUserFiles(const QString &token)
             qDebug() << "ApiClient: Статус код (файлы):" << statusCode;
             qDebug() << "ApiClient: Тело ответа (файлы):" << responseData;
 
-            // Ожидаем строго 200 OK для успешного получения списка
             if (statusCode == 200) {
                 QJsonParseError parseError;
                 QJsonDocument doc = QJsonDocument::fromJson(responseData, &parseError);
@@ -227,7 +207,6 @@ void ApiClient::getUserFiles(const QString &token)
                                 file.uploadDate = fileObj.value("upload_date").toString();
                                 file.countViews = fileObj.value("count_views").toString();
 
-                                // Простая проверка, что основные поля не пустые (можно добавить больше проверок)
                                 if (!file.id.isEmpty() && !file.fileName.isEmpty() && !file.fileUrl.isEmpty()) {
                                     fileList.append(file);
                                 } else {
@@ -240,7 +219,6 @@ void ApiClient::getUserFiles(const QString &token)
 
                     } else {
                         qWarning() << "ApiClient: Ошибка ответа сервера (файлы) - неверный статус или отсутствует массив 'files'.";
-                            // Попробуем извлечь сообщение об ошибке, если оно есть в другом формате
                         QString errMsg = jsonObj.contains("message") ? jsonObj["message"].toString() : "Неверный формат ответа от сервера.";
                         emit userFilesFailed(errMsg, statusCode);
                     }
@@ -249,7 +227,6 @@ void ApiClient::getUserFiles(const QString &token)
                     emit userFilesFailed("Ошибка ответа сервера: не удалось разобрать JSON (" + parseError.errorString() + ").", statusCode);
                 }
             } else {
-                // Обработка кодов ошибок HTTP (4xx, 5xx)
                 QString errorMsg = QString("Ошибка сервера при получении файлов (Код: %1)").arg(statusCode);
                 if (!responseData.isEmpty()) {
                     // Пытаемся получить текст ошибки из ответа
@@ -301,11 +278,8 @@ void ApiClient::uploadFile(const QString &token, const QString &filePath)
     }
 
     // --- Подготовка запроса ---
-    // ЗАМЕНИТЕ "upload_file.php" на ваш реальный эндпоинт
     QUrl uploadUrl = buildUrl("upload_file.php");
     QNetworkRequest request(uploadUrl);
-    // НЕ УСТАНАВЛИВАЕМ Content-Type здесь, QHttpMultiPart сделает это сам
-
     // --- Создание multipart/form-data ---
     // QHttpMultiPart должен существовать до завершения ответа, делаем его дочерним для reply
     QHttpMultiPart *multiPart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
@@ -324,7 +298,7 @@ void ApiClient::uploadFile(const QString &token, const QString &filePath)
     filePart.setHeader(QNetworkRequest::ContentDispositionHeader,
                        QVariant(QString("form-data; name=\"file\"; filename=\"%1\"").arg(fileName)));
 
-    // (Опционально, но рекомендуется) Устанавливаем Content-Type файла
+    // Устанавливаем Content-Type файла
     QMimeDatabase mimeDb;
     QMimeType mimeType = mimeDb.mimeTypeForFile(fileInfo);
     if (mimeType.isValid()) {
@@ -336,8 +310,6 @@ void ApiClient::uploadFile(const QString &token, const QString &filePath)
     }
 
     filePart.setBodyDevice(file); // Передаем открытый QFile напрямую
-    // ВАЖНО: Устанавливаем QHttpMultiPart как родителя для QFile.
-    // Когда multiPart будет удален (после завершения ответа), он удалит и file.
     file->setParent(multiPart);
     multiPart->append(filePart);
 
@@ -345,8 +317,6 @@ void ApiClient::uploadFile(const QString &token, const QString &filePath)
     qDebug() << "ApiClient: Отправка файла" << fileName << "на" << uploadUrl.toString();
     QNetworkReply *reply = networkManager->post(request, multiPart);
 
-    // Устанавливаем QNetworkReply как родителя для multiPart.
-    // Когда reply удаляется через deleteLater(), он удалит и multiPart (а тот, в свою очередь, удалит file).
     multiPart->setParent(reply);
 
     // --- Обработка ответа ---
@@ -360,23 +330,20 @@ void ApiClient::uploadFile(const QString &token, const QString &filePath)
     connect(reply, &QNetworkReply::finished, this, [this, reply, fileName]() { // Захватываем fileName для логов
         qDebug() << "ApiClient: Ответ на загрузку файла" << fileName << "получен.";
 
-        // Проверка на сетевые ошибки (хотя errorOccurred обычно срабатывает раньше)
+        // Проверка на сетевые ошибки
         if (reply->error() == QNetworkReply::NoError) {
             int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             QByteArray responseData = reply->readAll();
             qDebug() << "ApiClient: Статус код (загрузка):" << statusCode;
             qDebug() << "ApiClient: Тело ответа (загрузка):" << responseData;
 
-            // Ожидаем строго 200 OK для успешной загрузки
             if (statusCode == 200) {
-                // Можно добавить парсинг JSON ответа, если сервер что-то возвращает
                 qDebug() << "ApiClient: Файл" << fileName << "успешно загружен.";
                 emit uploadSuccess();
             } else {
                 // Ошибка сервера (не 200 OK)
                 QString errorMsg = QString("Ошибка сервера при загрузке файла '%1' (Код: %2)").arg(fileName).arg(statusCode);
                 if (!responseData.isEmpty()) {
-                    // Попытка извлечь сообщение из ответа (может быть JSON или текст)
                     QJsonDocument doc = QJsonDocument::fromJson(responseData);
                     if (!doc.isNull() && doc.isObject() && doc.object().contains("message")) {
                         errorMsg = QString("Ошибка загрузки '%1': %2").arg(fileName).arg(doc.object()["message"].toString());
@@ -384,7 +351,7 @@ void ApiClient::uploadFile(const QString &token, const QString &filePath)
                         errorMsg = QString("Ошибка сервера при загрузке '%1' (%2): %3").arg(fileName).arg(statusCode).arg(QString::fromUtf8(responseData));
                     }
                 }
-                if (statusCode == 401 || statusCode == 403) {
+                if (statusCode == 201) {
                     errorMsg = QString("Ошибка авторизации при загрузке файла '%1'.").arg(fileName);
                 }
                 qWarning() << "ApiClient: Загрузка файла" << fileName << "завершилась с ошибкой или неожиданным статусом:" << statusCode;
@@ -427,7 +394,6 @@ void ApiClient::getFileInfo(const QString &token, const QString &fileUrlIdentifi
 
     QNetworkReply *reply = networkManager->post(request, postData.toString(QUrl::FullyEncoded).toUtf8());
 
-    // Соединяем сигналы ответа
     connect(reply, &QNetworkReply::finished, this, [this, reply, fileUrlIdentifier]() {
         qDebug() << "ApiClient: Ответ на запрос информации о файле" << fileUrlIdentifier << "получен.";
 
@@ -437,7 +403,6 @@ void ApiClient::getFileInfo(const QString &token, const QString &fileUrlIdentifi
             qDebug() << "ApiClient: Статус код (инфо):" << statusCode;
             qDebug() << "ApiClient: Тело ответа (инфо):" << responseData;
 
-            // Ожидаем 200 OK
             if (statusCode == 200) {
                 QJsonParseError parseError;
                 QJsonDocument doc = QJsonDocument::fromJson(responseData, &parseError);
@@ -457,7 +422,6 @@ void ApiClient::getFileInfo(const QString &token, const QString &fileUrlIdentifi
                     emit fileInfoFailed("Ошибка ответа сервера: не удалось разобрать JSON (" + parseError.errorString() + ").", statusCode);
                 }
             } else {
-                // Ошибка сервера (не 200 OK)
                 QString errorMsg = QString("Ошибка сервера при получении информации о файле (Код: %1)").arg(statusCode);
                 if (!responseData.isEmpty()) {
                     // Попытка извлечь сообщение из ответа
@@ -470,8 +434,6 @@ void ApiClient::getFileInfo(const QString &token, const QString &fileUrlIdentifi
                 }
                 if (statusCode == 401 || statusCode == 403) {
                     errorMsg = "Ошибка авторизации при доступе к информации о файле.";
-                } else if (statusCode == 404) {
-                    errorMsg = "Файл не найден на сервере.";
                 }
                 qWarning() << "ApiClient: Запрос информации о файле" << fileUrlIdentifier << "завершился с ошибкой:" << statusCode;
                 emit fileInfoFailed(errorMsg, statusCode);
@@ -512,13 +474,12 @@ void ApiClient::downloadFile(const QString &token, const QString &fileId, const 
 
     // --- Подготовка запроса ---
     QNetworkRequest request(downloadUrl); // URL уже содержит параметры GET
-    // request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded"); // НЕ НУЖНО для GET
 
     // --- Отправка запроса GET ---
     qDebug() << "ApiClient: Запрос GET на скачивание файла:" << downloadUrl.toString(); // Теперь URL включает параметры
     QNetworkReply *reply = networkManager->get(request); // ИСПОЛЬЗУЕМ GET вместо POST
 
-    // --- Обработка ответа (остается почти без изменений) ---
+    // --- Обработка ответа  ---
     connect(reply, &QNetworkReply::downloadProgress, this, [this, reply, fileId](qint64 bytesReceived, qint64 bytesTotal) {
         emit downloadProgress(fileId, bytesReceived, bytesTotal);
     });
@@ -530,19 +491,17 @@ void ApiClient::downloadFile(const QString &token, const QString &fileId, const 
             int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             qDebug() << "ApiClient: Статус код (скачивание):" << statusCode;
 
-            // Ожидаем 200 OK
             if (statusCode == 200) {
                 QByteArray fileData = reply->readAll();
                 if (!fileData.isEmpty()) {
                     qDebug() << "ApiClient: Файл ID:" << fileId << "успешно скачан (" << fileData.size() << "байт).";
                     emit downloadSuccess(fileId, fileData, originalFileName);
                 } else {
-                    // Этот случай маловероятен при коде 200 и Content-Length, но проверим
                     qWarning() << "ApiClient: Скачивание файла ID:" << fileId << "завершилось успешно (код 200), но получены пустые данные.";
                     emit downloadFailed(fileId, "Сервер вернул пустой файл.", statusCode);
                 }
             } else {
-                // Обработка ошибок HTTP (4xx, 5xx, и 201 от вашего API)
+                // Обработка ошибок HTT
                 QByteArray errorData = reply->readAll();
                 QString errorMsg = QString("Ошибка сервера при скачивании файла (Код: %1)").arg(statusCode);
                 // Пытаемся разобрать JSON ошибку, которую возвращает ваш API при коде 201
@@ -556,12 +515,6 @@ void ApiClient::downloadFile(const QString &token, const QString &fileId, const 
                 } else if (!errorData.isEmpty()) { // Для других кодов ошибок
                     errorMsg += ": " + QString::fromUtf8(errorData);
                 }
-
-                if (statusCode == 401 || statusCode == 403) { // Стандартные коды
-                    errorMsg = "Ошибка авторизации при скачивании файла.";
-                } else if (statusCode == 404) { // Стандартные коды
-                    errorMsg = "Файл не найден на сервере.";
-                } // Ошибки с кодом 201 уже обработаны выше
 
                 qWarning() << "ApiClient: Скачивание файла ID:" << fileId << "завершилось с ошибкой или неожиданным статусом:" << statusCode;
                 emit downloadFailed(fileId, errorMsg, statusCode);
@@ -592,7 +545,6 @@ void ApiClient::deleteFile(const QString &token, const QString &fileId)
     }
 
     // --- Подготовка запроса ---
-    // ЗАМЕНИТЕ "delete_file.php" на ваш реальный эндпоинт
     QUrl deleteUrl = buildUrl("delete_file.php");
     QNetworkRequest request(deleteUrl);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
@@ -664,7 +616,7 @@ void ApiClient::getUserList(const QString &token)
         emit userListFailed("Внутренняя ошибка: отсутствует токен.", 0);
         return;
     }
-    QUrl listUrl = buildUrl("user_list.php"); // Ваш эндпоинт
+    QUrl listUrl = buildUrl("user_list.php");
     QNetworkRequest request(listUrl);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
     QUrlQuery postData;
@@ -674,7 +626,6 @@ void ApiClient::getUserList(const QString &token)
     QNetworkReply *reply = networkManager->post(request, postData.toString(QUrl::FullyEncoded).toUtf8());
 
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        // ... (стандартная обработка finished: проверка reply->error(), statusCode, parse JSON) ...
         if (reply->error() == QNetworkReply::NoError) {
             int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             QByteArray responseData = reply->readAll();
@@ -705,7 +656,6 @@ void ApiClient::getUserList(const QString &token)
         } else { /* Ошибка сети */ emit userListFailed(reply->errorString(), 0); }
         reply->deleteLater();
     });
-    // Не забудьте обработчик errorOccurred для сетевых ошибок
     connect(reply, &QNetworkReply::errorOccurred, this, [this, reply](QNetworkReply::NetworkError code){/*...*/});
 }
 
@@ -732,7 +682,6 @@ void ApiClient::deleteUser(const QString &token, const QString &userId)
             int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             QByteArray responseData = reply->readAll();
             qDebug() << "ApiClient: Статус код (удаление user):" << statusCode << "Тело:" << responseData;
-                // Считаем 200 OK успехом (можно добавить проверку JSON ответа, если он есть)
             if (statusCode == 200) {
                 emit deleteUserSuccess(userId);
             } else {
@@ -776,7 +725,7 @@ void ApiClient::changeUserPassword(const QString &token, const QString &userId, 
             int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             QByteArray responseData = reply->readAll();
             qDebug() << "ApiClient: Статус код (смена пароля):" << statusCode << "Тело:" << responseData;
-            if (statusCode == 200) { // Считаем 200 OK успехом
+            if (statusCode == 200) { // Считаем 200 успехом
                 emit changePasswordSuccess(userId);
             } else {
                 QString errorMsg = parseErrorMessage(responseData, "Ошибка смены пароля");
@@ -813,7 +762,6 @@ void ApiClient::createNewUser(const QString &token, const QString &username, con
     qDebug() << "ApiClient: Запрос POST на создание пользователя:" << username;
     QNetworkReply *reply = networkManager->post(request, postData.toString(QUrl::FullyEncoded).toUtf8());
 
-    // --- ИЗМЕНЕНИЕ ЗДЕСЬ: Добавляем 'token' в список захвата лямбды ---
     connect(reply, &QNetworkReply::finished, this, [this, reply, username, token]() {
         // -----------------------------------------------------------------
         qDebug() << "ApiClient: Ответ на создание пользователя" << username << "получен.";
@@ -829,12 +777,8 @@ void ApiClient::createNewUser(const QString &token, const QString &username, con
                     // Проверяем статус успеха от API
                     if (obj.value("status").toString() == "success") {
                         qDebug() << "ApiClient: Пользователь" << username << "успешно создан. Запрашиваем обновленный список.";
-                        // Вызываем метод для получения нового списка пользователей
                         this->getUserList(token); // Теперь 'token' доступен здесь
-                        // Сигнал createUserSuccess больше не нужен, т.к. мы обновляем список
-                        // emit createUserSuccess(...); // <<-- Эта строка УДАЛЕНА (как в вашем коде)
                     } else {
-                        // Сервер вернул код 200, но статус не "success"
                         QString errMsg = parseErrorMessage(responseData, "Ошибка создания пользователя"); // Используем парсер
                         emit createUserFailed(username, errMsg, statusCode);
                     }

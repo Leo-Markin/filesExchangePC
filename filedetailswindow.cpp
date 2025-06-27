@@ -1,20 +1,20 @@
 #include "filedetailswindow.h"
 #include "ui_filedetailswindow.h"
-#include "apiclient.h" // Для вызова API
+#include "apiclient.h"
 
 #include <QJsonObject>
 #include <QMessageBox>
 #include <QDebug>
-#include <QFileDialog> // <-- Для диалога сохранения
-#include <QFile>       // <-- Для записи файла
-#include <QProgressBar>// <-- Для прогресс-бара
+#include <QFileDialog>
+#include <QFile>
+#include <QProgressBar>
 
 FileDetailsWindow::FileDetailsWindow(const QString &token, const QString &urlIdentifier, const QString &fileId, ApiClient *client, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FileDetailsWindow),
     apiToken(token),
     fileUrlIdentifier(urlIdentifier), // Инициализируем идентификатор URL
-    currentFileId(fileId),        // Инициализируем ID файла
+    currentFileId(fileId),
     currentFileName(""),
     apiClient(client),
     downloadProgressBar(nullptr)
@@ -35,7 +35,7 @@ FileDetailsWindow::FileDetailsWindow(const QString &token, const QString &urlIde
         QMessageBox::critical(this, "Ошибка инициализации", "Не удалось инициализировать API клиент.");
         setFieldsEnabled(false);
         ui->fileNameLabel->setText("Ошибка: нет API клиента");
-        ui->downloadButton->setEnabled(false); // Явно отключаем кнопку
+        ui->downloadButton->setEnabled(false); // Отключаем кнопку
         return;
     }
 
@@ -89,15 +89,12 @@ void FileDetailsWindow::setDownloadingState(bool downloading)
             downloadProgressBar->setValue(0); // Сброс
         }
     }
-    // Можно блокировать и другие элементы, если нужно
-    // ui->closeButton->setEnabled(!downloading);
 }
 
 
 // Запрос информации о файле
 void FileDetailsWindow::requestFileInfo()
 {
-    // --- ИЗМЕНЕНИЕ: Используем fileUrlIdentifier для запроса ---
     if (apiClient && !apiToken.isEmpty() && !fileUrlIdentifier.isEmpty()) {
         qDebug() << "FileDetailsWindow: Запрос информации для URL ID:" << fileUrlIdentifier; // Исправлен лог
         ui->fileNameLabel->setText("Загрузка данных...");
@@ -105,7 +102,6 @@ void FileDetailsWindow::requestFileInfo()
         apiClient->getFileInfo(apiToken, fileUrlIdentifier);
     } else {
         qDebug() << "FileDetailsWindow: Недостаточно данных для запроса информации.";
-        // Ошибка остается прежней, но контекст изменился
         handleInfoFailed("Внутренняя ошибка: нет токена или идентификатора URL файла.", 0);
     }
     // ----------------------------------------------------
@@ -114,14 +110,11 @@ void FileDetailsWindow::requestFileInfo()
 // Обработка успешного ответа с информацией о файле
 void FileDetailsWindow::handleInfoSuccess(const QJsonObject &fileData)
 {
-    // --- ДОБАВЛЕНО: Проверка, что полученная информация соответствует нашему ID файла ---
     QString responseFileId = fileData.value("id").toString(); // Предполагаем, что API возвращает 'id'
     if (!responseFileId.isEmpty() && responseFileId != currentFileId) {
         qWarning() << "FileDetailsWindow: Получен ответ fileInfoSuccess для другого файла!"
                    << "Ожидали ID:" << currentFileId << ", получили ID:" << responseFileId
                    << "для URL ID:" << fileUrlIdentifier << ". Игнорируем.";
-        // Не обновляем UI, если ID не совпал (можно показать ошибку или просто ничего не делать)
-        // handleInfoFailed("Получен ответ для другого файла.", 0); // Можно вызвать ошибку
         return; // Просто игнорируем этот ответ
     }
     // ----------------------------------------------------------------------------------
@@ -129,7 +122,6 @@ void FileDetailsWindow::handleInfoSuccess(const QJsonObject &fileData)
     qDebug() << "FileDetailsWindow: Получена информация о файле ID:" << currentFileId << "(запрошено по URL ID:" << fileUrlIdentifier << ")" << fileData;
 
     currentFileName = fileData.value("file_name").toString("Неизвестное имя");
-    // ... остальное заполнение полей ...
     ui->fileNameLabel->setText(currentFileName);
     ui->fileSizeLabel->setText(fileData.value("file_size").toString());
     ui->ownerNameLabel->setText(fileData.value("owner_name").toString());
@@ -145,7 +137,6 @@ void FileDetailsWindow::handleInfoSuccess(const QJsonObject &fileData)
 // Обработка ошибки при получении информации
 void FileDetailsWindow::handleInfoFailed(const QString &errorString, int statusCode)
 {
-    // --- Проверка ID (если возможно, см. handleInfoSuccess) ---
 
     qWarning() << "FileDetailsWindow: Ошибка получения информации для ID:" << currentFileId << "Статус:" << statusCode << "Ошибка:" << errorString;
     setFieldsEnabled(false);
@@ -156,12 +147,10 @@ void FileDetailsWindow::handleInfoFailed(const QString &errorString, int statusC
 // Нажатие кнопки "Скачать"
 void FileDetailsWindow::on_downloadButton_clicked()
 {
-    // --- Проверка: Убеждаемся, что используем currentFileId ---
     if (!apiClient || apiToken.isEmpty() || currentFileId.isEmpty()) { // Используем currentFileId
         QMessageBox::critical(this, "Ошибка", "Невозможно начать скачивание: отсутствует токен или ID файла.");
         return;
     }
-    // ... остальная часть метода без изменений ...
     qDebug() << "FileDetailsWindow: Нажата кнопка 'Скачать' для файла ID:" << currentFileId << "Имя:" << currentFileName; // Лог использует currentFileId
     setDownloadingState(true);
     if(downloadProgressBar) downloadProgressBar->setFormat("Скачивание: %p%");
@@ -237,7 +226,6 @@ void FileDetailsWindow::handleDownloadProgress(const QString &requestedFileId, q
 {
     // --- Проверка, для того ли файла пришел ответ ---
     if (requestedFileId != currentFileId) {
-        // Не показываем прогресс для чужого файла
         return;
     }
     // ----------------------------------------------
@@ -245,14 +233,11 @@ void FileDetailsWindow::handleDownloadProgress(const QString &requestedFileId, q
     if (downloadProgressBar && bytesTotal > 0) {
         int percent = static_cast<int>((static_cast<double>(bytesReceived) / static_cast<double>(bytesTotal)) * 100.0);
         downloadProgressBar->setValue(percent);
-        // Можно добавить отображение байт
         downloadProgressBar->setFormat(QString("Скачивание: %1 / %2 (%p%)")
                                            .arg(QLocale::system().formattedDataSize(bytesReceived)) // Форматирование байт
                                            .arg(QLocale::system().formattedDataSize(bytesTotal)));
     } else if (downloadProgressBar) {
-        // Если total неизвестен (bytesTotal <= 0)
         downloadProgressBar->setFormat(QString("Скачивание: %1").arg(QLocale::system().formattedDataSize(bytesReceived)));
-        // Можно сделать его "бегущим"
         downloadProgressBar->setMaximum(0);
         downloadProgressBar->setMinimum(0);
     }

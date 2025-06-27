@@ -5,7 +5,7 @@
 #include <QList>
 #include "datatypes.h" // Наша структура FileInfo
 
-// Прямые объявления для уменьшения зависимостей в заголовке
+
 namespace Ui { class UserWindow; }
 class ApiClient;
 class QTableWidgetItem;
